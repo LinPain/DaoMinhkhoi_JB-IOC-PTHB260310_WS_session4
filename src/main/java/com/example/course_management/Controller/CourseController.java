@@ -1,15 +1,20 @@
 package com.example.course_management.Controller;
 
+import com.example.course_management.Model.CourseStatus;
 import com.example.course_management.Response.ApiResponse;
 import com.example.course_management.Service.CourseService;
 import com.example.course_management.dto.CourseCreateRequest;
 import com.example.course_management.dto.CourseResponse;
+import com.example.course_management.dto.CourseResponseV2;
 import com.example.course_management.dto.CourseUpdateRequest;
+import com.example.course_management.dto.common.PageResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Sort;
+import com.example.course_management.Model.CourseStatus;
 
-import java.util.List;
+
 
 @RestController
 @RequestMapping("/courses")
@@ -22,15 +27,38 @@ public class CourseController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<CourseResponse>>> getAll() {
+    public ResponseEntity<ApiResponse<PageResponse<CourseResponseV2>>> getAll(
 
-        ApiResponse<List<CourseResponse>> response =
+            @RequestParam(defaultValue = "0")
+            int page,
+
+            @RequestParam(defaultValue = "10")
+            int size,
+
+            @RequestParam(required = false)
+            String sortBy,
+
+            @RequestParam(required = false)
+            Sort.Direction direction,
+
+            @RequestParam(required = false)
+            CourseStatus status,
+
+            @RequestParam(required = false)
+            String keyword) {
+
+        return ResponseEntity.ok(
                 new ApiResponse<>(
                         true,
                         "Course list retrieved successfully",
-                        service.findAll());
-
-        return ResponseEntity.ok(response);
+                        service.getPagedCourses(
+                                page,
+                                size,
+                                sortBy,
+                                direction,
+                                status,
+                                keyword)
+                ));
     }
 
     @GetMapping("/{id}")

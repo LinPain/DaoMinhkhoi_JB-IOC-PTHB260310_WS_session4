@@ -1,17 +1,17 @@
 package com.example.course_management.Service;
 
 import com.example.course_management.Model.Course;
+import com.example.course_management.Model.CourseStatus;
 import com.example.course_management.Model.Instructor;
 import com.example.course_management.Repository.CourseRepository;
 import com.example.course_management.Repository.InstructorRepository;
-import com.example.course_management.dto.CourseCreateRequest;
-import com.example.course_management.dto.CourseInstructorResponse;
-import com.example.course_management.dto.CourseResponse;
-import com.example.course_management.dto.CourseUpdateRequest;
+import com.example.course_management.dto.*;
+import com.example.course_management.dto.common.PageResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class CourseService {
@@ -42,19 +42,46 @@ public class CourseService {
                 course.getStatus(),
                 instructorResponse);
     }
+    public CourseResponse findById(Long id) {
 
-    public List<CourseResponse> findAll() {
-        return courseRepository.findAll()
-                .stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        Course course = courseRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Course not found"));
+
+        return mapToResponse(course);
     }
 
-    public CourseResponse findById(Long id) {
-        return courseRepository.findById(id)
-                .map(this::mapToResponse)
-                .orElseThrow(() ->
-                        new RuntimeException("Course not found"));
+    public PageResponse<CourseResponse> getPagedCourses(
+            int page,
+            int size,
+            String sortBy,
+            Sort.Direction direction) {
+
+        if (page < 0) {
+            page = 0;
+        }
+
+        if (sortBy == null || sortBy.isBlank()) {
+            sortBy = "id";
+        }
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(direction, sortBy));
+
+        Page<Course> coursePage =
+                courseRepository.findAll(pageable);
+
+        return new PageResponse<>(
+                coursePage
+                        .map(this::mapToResponse)
+                        .getContent(),
+                coursePage.getNumber(),
+                coursePage.getSize(),
+                coursePage.getTotalElements(),
+                coursePage.getTotalPages(),
+                coursePage.isLast()
+        );
     }
 
     public CourseResponse createCourse(CourseCreateRequest request) {
@@ -119,4 +146,43 @@ public class CourseService {
         
         return courseRepository.save(existing);
     }
+    public PageResponse<CourseResponseV2> getPagedCourses(
+            int page,
+            int size,
+            String sortBy,
+            Sort.Direction direction,
+            CourseStatus status,
+            String keyword) {
+
+        if (page < 0) {
+            page = 0;
+        }
+
+        Pageable pageable;
+
+        if (sortBy == null || sortBy.isBlank() || direction == null) {
+            pageable = PageRequest.of(page, size, Sort.unsorted());
+        } else {
+            pageable = PageRequest.of(
+                    page,
+                    size,
+                    Sort.by(direction, sortBy));
+        }
+
+        Page<CourseResponseV2> coursePage =
+                courseRepository.searchCourses(
+                        status,
+                        keyword,
+                        pageable);
+
+        return new PageResponse<>(
+                coursePage.getContent(),
+                coursePage.getNumber(),
+                coursePage.getSize(),
+                coursePage.getTotalElements(),
+                coursePage.getTotalPages(),
+                coursePage.isLast()
+        );
+    }
+
 }
